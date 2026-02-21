@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT Backup Report Generator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2330;
+    --border: #30363d;
+    --green: #3fb950;
+    --green-dim: #1a3a22;
+    --red: #f85149;
+    --red-dim: #3a1a1a;
+    --yellow: #d29922;
+    --yellow-dim: #3a2e10;
+    --blue: #58a6ff;
+    --text: #e6edf3;
+    --text-muted: #7d8590;
+    --accent: #238636;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 32px;
+    animation: fadeDown 0.6s ease;
+  }
+
+  header h1 {
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+
+  header h1 span { color: var(--green); }
+
+  header p {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-top: 6px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    background: var(--surface);
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .tab:hover:not(.active) { color: var(--text); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    animation: fadeUp 0.4s ease;
+  }
+
+  .card-title {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .field-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .field-row:last-child { border-bottom: none; }
+
+  .field-label {
+    font-size: 0.88rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .field-label .icon { font-size: 1rem; }
+
+  .status-toggle {
+    display: flex;
+    gap: 6px;
+  }
+
+  .status-btn {
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 600;
+  }
+
+  .status-btn.ok {
+    background: var(--green-dim);
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  .status-btn.ok-warn {
+    background: #2a2e1a;
+    border-color: var(--yellow);
+    color: var(--yellow);
+    outline: 1px solid var(--green);
+  }
+
+  .status-btn.error {
+    background: var(--red-dim);
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  .status-btn.warn {
+    background: var(--yellow-dim);
+    border-color: var(--yellow);
+    color: var(--yellow);
+  }
+
+  .status-btn.progress {
+    background: #0d2a3a;
+    border-color: #58a6ff;
+    color: #58a6ff;
+  }
+
+  .status-btn:hover { opacity: 0.8; transform: scale(1.03); }
+
+  .error-note {
+    display: none;
+    margin-top: 6px;
+    width: 100%;
+  }
+
+  .error-note input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    outline: none;
+  }
+
+  .error-note input::placeholder { color: var(--text-muted); }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .date-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+
+  .date-row label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  input[type="date"], input[type="text"], input[type="number"] {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    outline: none;
+    width: 100%;
+  }
+
+  input[type="date"]:focus, input[type="text"]:focus {
+    border-color: var(--blue);
+  }
+
+  .pssd-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .pssd-row label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .pssd-row input {
+    width: 80px;
+  }
+
+  .generate-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 16px;
+    letter-spacing: 0.3px;
+  }
+
+  .generate-btn:hover {
+    background: #2ea043;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(63,185,80,0.25);
+  }
+
+  .generate-btn:active { transform: translateY(0); }
+
+  .output-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    color: var(--text);
+    min-height: 80px;
+    display: none;
+    animation: fadeUp 0.3s ease;
+  }
+
+  .output-box.visible { display: block; }
+
+  .action-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    display: none;
+  }
+
+  .action-row.visible { display: flex; }
+
+  .copy-btn, .wa-btn {
+    flex: 1;
+    padding: 11px;
+    border-radius: 8px;
+    border: none;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .copy-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .copy-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+  .wa-btn {
+    background: #25D366;
+    color: #fff;
+  }
+
+  .wa-btn:hover {
+    background: #1ebe5d;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(37,211,102,0.3);
+  }
+
+  .copied {
+    color: var(--green) !important;
+    border-color: var(--green) !important;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🖥️ IT Backup <span>Report Tool</span></h1>
+  <p>// Select report type → fill in → copy & send</p>
+</header>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('daily')">📋 Daily</button>
+  <button class="tab" onclick="switchTab('weekend')">📅 Weekend</button>
+  <button class="tab" onclick="switchTab('monthly')">🗂️ Monthly</button>
+</div>
+
+<!-- ===================== DAILY PANEL ===================== -->
+<div class="panel active" id="panel-daily">
+
+  <div class="card">
+    <div class="card-title">📆 Report Info</div>
+    <div class="field-row">
+      <div class="field-group">
+        <div class="date-row">
+          <label>Date:</label>
+          <input type="date" id="daily-date">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">✅ Backup Status</div>
+
+    <div id="daily-fields">
+      <!-- Fields injected by JS -->
+    </div>
+  </div>
+
+  <button class="generate-btn" onclick="generateDaily()">⚡ Generate Report</button>
+  <div class="output-box" id="daily-output"></div>
+  <div class="action-row" id="daily-actions">
+    <button class="copy-btn" id="daily-copy-btn" onclick="copyText('daily-output', 'daily-copy-btn')">📋 Copy</button>
+    <button class="wa-btn" onclick="sendWhatsApp('daily-output')">💬 Send via WhatsApp</button>
+  </div>
+</div>
+
+<!-- ===================== WEEKEND PANEL ===================== -->
+<div class="panel" id="panel-weekend">
+
+  <div class="card">
+    <div class="card-title">📆 Report Info</div>
+    <div class="field-row">
+      <div class="field-group">
+        <div class="date-row">
+          <label>Date:</label>
+          <input type="date" id="weekend-date">
+        </div>
+        <div style="margin-top:8px; display:flex; gap:8px; align-items:center;">
+          <label style="font-size:0.8rem; color:var(--text-muted); font-family:'JetBrains Mono',monospace;">Day:</label>
+          <select id="weekend-day" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:0.8rem;outline:none;">
+            <option>Saturday</option>
+            <option>Sunday</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">✅ Weekend Tasks</div>
+    <div id="weekend-fields"></div>
+  </div>
+
+  <button class="generate-btn" onclick="generateWeekend()">⚡ Generate Report</button>
+  <div class="output-box" id="weekend-output"></div>
+  <div class="action-row" id="weekend-actions">
+    <button class="copy-btn" id="weekend-copy-btn" onclick="copyText('weekend-output', 'weekend-copy-btn')">📋 Copy</button>
+    <button class="wa-btn" onclick="sendWhatsApp('weekend-output')">💬 Send via WhatsApp</button>
+  </div>
+</div>
+
+<!-- ===================== MONTHLY PANEL ===================== -->
+<div class="panel" id="panel-monthly">
+
+  <div class="card">
+    <div class="card-title">📆 Report Info</div>
+    <div class="field-row">
+      <div class="field-group">
+        <div class="date-row">
+          <label>Month:</label>
+          <select id="monthly-month" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:0.8rem;outline:none;width:100%;">
+            <option>January</option><option>February</option><option>March</option>
+            <option>April</option><option>May</option><option>June</option>
+            <option>July</option><option>August</option><option>September</option>
+            <option>October</option><option>November</option><option>December</option>
+          </select>
+        </div>
+        <div class="date-row" style="margin-top:8px;">
+          <label>Year:</label>
+          <input type="number" id="monthly-year" value="2026" min="2020" max="2100" style="width:100px;">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🗂️ Monthly Tasks</div>
+    <div id="monthly-fields"></div>
+  </div>
+
+  <button class="generate-btn" onclick="generateMonthly()">⚡ Generate Report</button>
+  <div class="output-box" id="monthly-output"></div>
+  <div class="action-row" id="monthly-actions">
+    <button class="copy-btn" id="monthly-copy-btn" onclick="copyText('monthly-output', 'monthly-copy-btn')">📋 Copy</button>
+    <button class="wa-btn" onclick="sendWhatsApp('monthly-output')">💬 Send via WhatsApp</button>
+  </div>
+</div>
+
+<script>
+// ── Field Definitions ──────────────────────────────────────────
+const dailyFields = [
+  { id: 'freefilesync', icon: '🔄', label: 'Daily Backup using FreeFileSync', hasSelector: 'pssd' },
+  { id: 'nav-backup',   icon: '💾', label: 'NAV Full Backup (Backup Folder)' },
+  { id: 'phdd-nav',     icon: '🖴',  label: 'PHDD Dynamic NAV SQL Backup', hasSelector: 'phdd' },
+  { id: 'onedrive',     icon: '☁️',  label: 'OneDrive SQL Backup Uploaded and Space Freed Up' },
+  { id: 'nav-rep',      icon: '🔁', label: 'NAV Server Replication' },
+  { id: 'server-temp',  icon: '🌡️', label: 'Server Room Temperature' },
+  { id: 'all-devices',  icon: '🖥️',  label: 'All Devices Running' },
+];
+
+const weekendFields = [
+  { id: 'qb-backup',   icon: '💰', label: 'QB Backups' },
+  { id: 'ad-rep',      icon: '🔁', label: 'AD Server Replication' },
+  { id: 'nav-rep-w',   icon: '🔁', label: 'NAV Server Replication' },
+];
+
+const monthlyFields = [
+  { id: 'hdd-archive',  icon: '🗄️',  label: 'Archive Sync HDD Replaced', hasSelector: 'hdd' },
+  { id: 'firewall',     icon: '🔒', label: 'Firewall Config File Downloaded' },
+  { id: 'ad-full',      icon: '📂', label: 'AD Full Backup & Replication' },
+  { id: 'server-bkp',  icon: '🖥️',  label: 'Minor Server Backups' },
+];
+
+// ── Render Fields ──────────────────────────────────────────────
+function renderFields(fields, containerId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  fields.forEach(f => {
+    let selectorHtml = '';
+    if (f.hasSelector === 'phdd') {
+      selectorHtml = `
+        <div style="margin-top:8px; display:flex; align-items:center; gap:8px;">
+          <span style="font-size:0.75rem; color:var(--text-muted); font-family:'JetBrains Mono',monospace;">PHDD No:</span>
+          <select id="sel-${f.id}" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:0.78rem;outline:none;">
+            <option value="01">PHDD 01</option>
+            <option value="02">PHDD 02</option>
+          </select>
+        </div>`;
+    } else if (f.hasSelector === 'pssd') {
+      selectorHtml = `
+        <div style="margin-top:8px; display:flex; align-items:center; gap:8px;">
+          <span style="font-size:0.75rem; color:var(--text-muted); font-family:'JetBrains Mono',monospace;">PSSD No:</span>
+          <select id="sel-${f.id}" onchange="syncPssd(this.value)" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:0.78rem;outline:none;">
+            <option value="01">PSSD 01</option>
+            <option value="02">PSSD 02</option>
+            <option value="03">PSSD 03</option>
+            <option value="04">PSSD 04</option>
+          </select>
+        </div>`;
+    } else if (f.hasSelector === 'hdd') {
+      selectorHtml = `
+        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:0.75rem; color:var(--text-muted); font-family:'JetBrains Mono',monospace;">HDD Out:</span>
+            <select id="sel-${f.id}-out" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:0.78rem;outline:none;">
+              <option value="01">HDD 01</option>
+              <option value="02">HDD 02</option>
+              <option value="03">HDD 03</option>
+              <option value="04">HDD 04</option>
+            </select>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:0.75rem; color:var(--text-muted); font-family:'JetBrains Mono',monospace;">HDD In:</span>
+            <select id="sel-${f.id}-in" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 10px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:0.78rem;outline:none;">
+              <option value="01">HDD 01</option>
+              <option value="02">HDD 02</option>
+              <option value="03">HDD 03</option>
+              <option value="04">HDD 04</option>
+            </select>
+          </div>
+        </div>`;
+    }
+    // pssd-linked: no selector rendered, reads from freefilesync's selector
+
+    const div = document.createElement('div');
+    div.className = 'field-group';
+    div.style.borderBottom = '1px solid var(--border)';
+    div.style.paddingBottom = '8px';
+    div.style.marginBottom = '2px';
+    div.innerHTML = `
+      <div class="field-row" style="border:none;padding-bottom:0;">
+        <div class="field-label"><span class="icon">${f.icon}</span>${f.label}</div>
+        <div class="status-toggle" style="flex-wrap:wrap; gap:4px; justify-content:flex-end;">
+          <button class="status-btn ok"       onclick="setStatus('${f.id}', 'ok', this)">✅ OK</button>
+          <button class="status-btn"          onclick="setStatus('${f.id}', 'ok-warn', this)">✅⚠️ OK w/Warn</button>
+          <button class="status-btn"          onclick="setStatus('${f.id}', 'warn', this)">⚠️ Warn</button>
+          <button class="status-btn"          onclick="setStatus('${f.id}', 'progress', this)">🔄 Running</button>
+          <button class="status-btn"          onclick="setStatus('${f.id}', 'error', this)">❌ Error</button>
+        </div>
+      </div>
+      ${selectorHtml}
+      <div class="error-note" id="note-${f.id}">
+        <input type="text" id="note-input-${f.id}" placeholder="Add note...">
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function setStatus(id, status, btn) {
+  const parent = btn.closest('.field-group');
+  parent.querySelectorAll('.status-btn').forEach(b => {
+    b.classList.remove('ok','ok-warn','error','warn','progress');
+  });
+  btn.classList.add(status);
+  const note = document.getElementById('note-' + id);
+  const input = document.getElementById('note-input-' + id);
+  if (status === 'ok') {
+    note.style.display = 'none';
+  } else {
+    note.style.display = 'block';
+    const placeholders = {
+      'ok-warn':  'Describe the warning (completed but noted)...',
+      error:      'Describe error / action taken...',
+      warn:       'Describe warning...',
+      progress:   'Est. completion time or note...'
+    };
+    if (input) {
+      input.placeholder = placeholders[status] || 'Add note...';
+      input.style.borderColor = status === 'error'   ? 'var(--red)'
+                               : status === 'progress' ? 'var(--blue)'
+                               : 'var(--yellow)';
+    }
+  }
+}
+
+function getStatus(id, fields) {
+  const f = fields.find(x => x.id === id);
+  if (!f) return { status: 'ok', note: '' };
+  const container = document.getElementById('note-' + id);
+  const errBtn = container ? container.previousElementSibling.querySelector('.status-btn.error') : null;
+  const status = errBtn ? 'error' : 'ok';
+  const note = container ? container.querySelector('input').value : '';
+  return { status, note };
+}
+
+// ── Format date DD/MM/YYYY ─────────────────────────────────────
+function fmtDate(val) {
+  if (!val) return 'DD/MM/YYYY';
+  const [y,m,d] = val.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function statusLine(icon, label, status, note) {
+  const marker = status === 'ok' ? '✅' : '❌';
+  const suffix = status === 'ok' ? 'Done' : `FAILED${note ? ' — ' + note : ''}`;
+  return `${marker} ${icon} ${label}: ${suffix}`;
+}
+
+// ── Generate Daily ─────────────────────────────────────────────
+function generateDaily() {
+  const date = fmtDate(document.getElementById('daily-date').value);
+
+  const lines = dailyFields.map(f => {
+    const s = getFieldStatus(f.id);
+    return buildLine(f, s);
+  });
+
+  const hasError    = dailyFields.some(f => getFieldStatus(f.id).status === 'error');
+  const hasWarn     = dailyFields.some(f => ['warn','ok-warn'].includes(getFieldStatus(f.id).status));
+  const hasProgress = dailyFields.some(f => getFieldStatus(f.id).status === 'progress');
+  const statusText  = hasError    ? '⚠️ Backup completed with errors. Action required.'
+                    : hasProgress ? '🔄 Some tasks still in progress.'
+                    : hasWarn     ? '✅⚠️ Completed with warnings. Please review.'
+                    : '✅ All backups completed successfully. No issues to report.';
+
+  const msg =
+`📋 DAILY BACKUP STATUS REPORT
+📅 Date: ${date}
+
+${lines.join('\n')}
+
+━━━━━━━━━━━━━━━━
+📌 Status: ${statusText}
+
+— IT Team`;
+
+  showOutput('daily', msg);
+}
+
+// ── Generate Weekend ───────────────────────────────────────────
+function generateWeekend() {
+  const date = fmtDate(document.getElementById('weekend-date').value);
+  const day = document.getElementById('weekend-day').value;
+
+  const lines = weekendFields.map(f => {
+    const s = getFieldStatus(f.id);
+    return buildLine(f, s);
+  });
+
+  const hasError    = weekendFields.some(f => getFieldStatus(f.id).status === 'error');
+  const hasWarn     = weekendFields.some(f => ['warn','ok-warn'].includes(getFieldStatus(f.id).status));
+  const hasProgress = weekendFields.some(f => getFieldStatus(f.id).status === 'progress');
+  const statusText  = hasError    ? '⚠️ Weekend tasks completed with errors. Action required.'
+                    : hasProgress ? '🔄 Some tasks still in progress.'
+                    : hasWarn     ? '✅⚠️ Completed with warnings. Please review.'
+                    : '✅ All weekend backups and replications completed. No issues.';
+
+  const msg =
+`📋 WEEKEND BACKUP STATUS REPORT
+📅 Date: ${date} (${day})
+
+${lines.join('\n')}
+
+━━━━━━━━━━━━━━━━
+📌 Status: ${statusText}
+
+— IT Team`;
+
+  showOutput('weekend', msg);
+}
+
+// ── Generate Monthly ───────────────────────────────────────────
+function generateMonthly() {
+  const month = document.getElementById('monthly-month').value;
+  const year = document.getElementById('monthly-year').value;
+
+  const lines = monthlyFields.map(f => {
+    const s = getFieldStatus(f.id);
+    return buildLine(f, s);
+  });
+
+  const hasError    = monthlyFields.some(f => getFieldStatus(f.id).status === 'error');
+  const hasWarn     = monthlyFields.some(f => ['warn','ok-warn'].includes(getFieldStatus(f.id).status));
+  const hasProgress = monthlyFields.some(f => getFieldStatus(f.id).status === 'progress');
+  const statusText  = hasError    ? '⚠️ Month completed with errors. Action required.'
+                    : hasProgress ? '🔄 Some tasks still in progress.'
+                    : hasWarn     ? '✅⚠️ Completed with warnings. Please review.'
+                    : '✅ Month completed successfully. No issues to report.';
+
+  const msg =
+`🗂️ MONTHLY TASKS REPORT
+📅 Month: ${month} ${year}
+
+${lines.join('\n')}
+
+━━━━━━━━━━━━━━━━
+📌 Status: ${statusText}
+
+— IT Team`;
+
+  showOutput('monthly', msg);
+}
+
+// ── Helpers ────────────────────────────────────────────────────
+function getFieldStatus(id) {
+  const noteEl = document.getElementById('note-' + id);
+  if (!noteEl) return { status: 'ok', note: '' };
+  const parent = noteEl.closest('.field-group');
+  const active = parent.querySelector('.status-btn.error, .status-btn.warn, .status-btn.progress, .status-btn.ok-warn');
+  let status = 'ok';
+  if (active) {
+    if (active.classList.contains('error'))    status = 'error';
+    else if (active.classList.contains('ok-warn'))  status = 'ok-warn';
+    else if (active.classList.contains('warn'))     status = 'warn';
+    else if (active.classList.contains('progress')) status = 'progress';
+  }
+  const input = document.getElementById('note-input-' + id);
+  return { status, note: input ? input.value : '' };
+}
+
+function buildLine(f, s) {
+  let label = f.label;
+  if (f.hasSelector === 'phdd') {
+    const sel = document.getElementById('sel-' + f.id);
+    if (sel) label = `PHDD ${sel.value} Dynamic NAV SQL Backup`;
+  } else if (f.hasSelector === 'pssd') {
+    const sel = document.getElementById('sel-' + f.id);
+    if (sel) label = `Daily Backup using FreeFileSync on PSSD ${sel.value}`;
+  } else if (f.hasSelector === 'pssd-linked') {
+    const sel = document.getElementById('sel-freefilesync');
+    if (sel) label = `Daily Backup (PSSD ${sel.value})`;
+  } else if (f.hasSelector === 'hdd') {
+    const selOut = document.getElementById('sel-' + f.id + '-out');
+    const selIn  = document.getElementById('sel-' + f.id + '-in');
+    if (selOut && selIn) label = `Archive Sync HDD ${selOut.value} Replaced and Added HDD ${selIn.value}`;
+  }
+  if (s.status === 'ok') {
+    return `✅ ${f.icon} ${label}: Done`;
+  } else if (s.status === 'ok-warn') {
+    return `✅⚠️ ${f.icon} ${label}: Done with Warning${s.note ? '\n   ↳ ' + s.note : ''}`;
+  } else if (s.status === 'warn') {
+    return `⚠️ ${f.icon} ${label}: Completed with Warnings${s.note ? '\n   ↳ ' + s.note : ''}`;
+  } else if (s.status === 'progress') {
+    return `🔄 ${f.icon} ${label}: In Progress${s.note ? '\n   ↳ ' + s.note : ''}`;
+  } else {
+    return `❌ ${f.icon} ${label}: FAILED${s.note ? '\n   ↳ ' + s.note : ''}`;
+  }
+}
+
+function syncPssd(val) {
+  // Both FreeFileSync and PSSD backup use the same number — no extra action needed, they both read sel-freefilesync
+}
+
+function showOutput(panel, msg) {
+  const box = document.getElementById(panel + '-output');
+  const actions = document.getElementById(panel + '-actions');
+  box.textContent = msg;
+  box.classList.add('visible');
+  actions.classList.add('visible');
+}
+
+function copyText(boxId, btnId) {
+  const text = document.getElementById(boxId).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById(btnId);
+    btn.textContent = '✅ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+function sendWhatsApp(boxId) {
+  const text = document.getElementById(boxId).textContent;
+  const encoded = encodeURIComponent(text);
+  window.open('https://wa.me/?text=' + encoded, '_blank');
+}
+
+// ── Tab Switch ─────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ── Init ───────────────────────────────────────────────────────
+function init() {
+  // Set today's date
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('daily-date').value = today;
+  document.getElementById('weekend-date').value = today;
+
+  // Set current month
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const now = new Date();
+  document.getElementById('monthly-month').value = monthNames[now.getMonth()];
+  document.getElementById('monthly-year').value = now.getFullYear();
+
+  // Render fields
+  renderFields(dailyFields, 'daily-fields');
+  renderFields(weekendFields, 'weekend-fields');
+  renderFields(monthlyFields, 'monthly-fields');
+}
+
+init();
+</script>
+</body>
+</html>
